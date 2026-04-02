@@ -403,6 +403,9 @@ def flush_cache(edges, filename, comment_size):
 
 
 def add_archive():
+    if not ARCHIVE_PATH.exists():
+        return [0, 0, 0, 0, 0]
+
     with ARCHIVE_PATH.open("r") as handle:
         lines = handle.readlines()
 
