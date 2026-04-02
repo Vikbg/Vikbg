@@ -26,7 +26,13 @@ CACHE_COMMENT_LINE = "This line is a comment block. Write whatever you want here
 
 # Visual widths used when inserting dot padding in the SVG text fields.
 AGE_DATA_WIDTH = 49
+COMMIT_DATA_WIDTH = 22
 LOC_DATA_WIDTH = 25
+FOLLOWER_DATA_WIDTH = 10
+REPO_DATA_WIDTH = 6
+STAR_DATA_WIDTH = 14
+STATS_SECONDARY_COLUMN_WIDTH = 34
+STATS_SECONDARY_SEPARATOR = " |  "
 
 # Simple runtime counters so the script can report how many GraphQL calls each path used.
 QUERY_COUNT = {
@@ -521,32 +527,74 @@ def svg_overwrite(
 
     # Each field has its own width target so the dots keep the card aligned like terminal output.
     justify_format(root, "age_data", age_data, AGE_DATA_WIDTH)
-    justify_format(root, "commit_data", commit_data, 22)
-    justify_format(root, "star_data", star_data, 14)
-    justify_format(root, "repo_data", repo_data, 6)
+    justify_format(root, "commit_data", commit_data, COMMIT_DATA_WIDTH)
+    justify_format(root, "star_data", star_data, STAR_DATA_WIDTH)
+    justify_format(root, "repo_data", repo_data, REPO_DATA_WIDTH)
     justify_format(root, "contrib_data", contrib_data)
-    justify_format(root, "follower_data", follower_data, 10)
+    justify_format(root, "follower_data", follower_data, FOLLOWER_DATA_WIDTH)
     justify_format(root, "loc_data", loc_data[2], LOC_DATA_WIDTH)
     justify_format(root, "loc_add", format_compact_number(loc_data[0]))
     justify_format(root, "loc_del", format_compact_number(loc_data[1]), 5)
+    find_and_replace(
+        root,
+        "repo_stats_gap",
+        secondary_stat_gap(repo_stats_left_width(repo_data, contrib_data)),
+    )
+    find_and_replace(
+        root,
+        "commit_stats_gap",
+        secondary_stat_gap(commit_stats_left_width(commit_data)),
+    )
     tree.write(filename, encoding="utf-8", xml_declaration=True)
 
 
 # Replace one SVG text node and regenerate its matching "*_dots" spacing field.
 def justify_format(root, element_id, new_text, length=0):
-    if isinstance(new_text, int):
-        new_text = f"{new_text:,}"
-    new_text = str(new_text)
+    new_text = format_display_text(new_text)
     find_and_replace(root, element_id, new_text)
 
     # Dots are generated from a target width so labels and values stay visually aligned.
-    just_len = max(0, length - len(new_text))
+    dot_string = build_dot_string(new_text, length)
+    find_and_replace(root, f"{element_id}_dots", dot_string)
+
+
+# Normalize values to the exact text form shown inside the SVG card.
+def format_display_text(value):
+    if isinstance(value, int):
+        return f"{value:,}"
+    return str(value)
+
+
+# Build the dot padding that visually separates a label from its value in the SVG.
+def build_dot_string(value_text, length):
+    just_len = max(0, length - len(value_text))
     if just_len <= 2:
         dot_map = {0: "", 1: " ", 2: ". "}
-        dot_string = dot_map[just_len]
-    else:
-        dot_string = " " + ("." * just_len) + " "
-    find_and_replace(root, f"{element_id}_dots", dot_string)
+        return dot_map[just_len]
+    return " " + ("." * just_len) + " "
+
+
+# Keep the second stat column aligned by filling any slack before the separator.
+def secondary_stat_gap(left_width, target_width=STATS_SECONDARY_COLUMN_WIDTH):
+    return (" " * max(0, target_width - left_width)) + STATS_SECONDARY_SEPARATOR
+
+
+# Measure the visible width of the left side of the first GitHub stats row.
+def repo_stats_left_width(repo_data, contrib_data):
+    repo_text = format_display_text(repo_data)
+    contrib_text = format_display_text(contrib_data)
+    return len(
+        f". Repos:{build_dot_string(repo_text, REPO_DATA_WIDTH)}{repo_text}"
+        f" {{Contributed: {contrib_text}}}"
+    )
+
+
+# Measure the visible width of the left side of the second GitHub stats row.
+def commit_stats_left_width(commit_data):
+    commit_text = format_display_text(commit_data)
+    return len(
+        f". Commits:{build_dot_string(commit_text, COMMIT_DATA_WIDTH)}{commit_text}"
+    )
 
 
 # Find one SVG element by its id attribute and replace its text if it exists.
