@@ -1,3 +1,9 @@
+"""Copyright 2026 Vikbg.
+
+SPDX-License-Identifier: Apache-2.0
+Keep the attribution notice from the repository NOTICE file when redistributing.
+"""
+
 import datetime
 import hashlib
 import os
@@ -721,6 +727,7 @@ def main():
     print("Calculation times:")
 
     OWNER_ID, user_time = perf_counter(user_getter, USER_NAME)
+    print(OWNER_ID)
     print_duration("account data", user_time)
 
     age_data, age_time = perf_counter(format_age, BIRTHDAY)
