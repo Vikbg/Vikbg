@@ -5,6 +5,7 @@ on:
       - main
   schedule:
     - cron: "0 4 * * *"
+  workflow_dispatch:
 permissions:
   contents: write
 jobs:
@@ -27,7 +28,7 @@ jobs:
         env:
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN || github.token }}
           USER_NAME: ${{ secrets.USER_NAME || github.repository_owner }}
-        run: python today.py
+        run: python generate_readme.py
       - name: Commit
         run: |-
           git add .
