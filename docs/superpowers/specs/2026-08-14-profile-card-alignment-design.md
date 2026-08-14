@@ -12,13 +12,14 @@ The resulting system must keep the visual layout aligned automatically when labe
 ## User-visible success criteria
 
 1. Every simple profile row uses computed dot padding rather than manually maintained dot counts.
-2. Values within the same visual group end at a consistent target column.
-3. GitHub Stats rows remain aligned when counts grow or shrink.
-4. The final `)` of the GitHub LOC row stays aligned with the right edge of the reference stats row.
-5. The LOC deletion value never receives dot padding between the comma and the minus sign.
-6. The same alignment behavior is applied to both SVG themes.
-7. Changing a static value such as a language list, hobby, email address, IDE string, or portfolio URL does not require manually recounting dots.
-8. No U+2014 character is present in any file modified by this work, including comments, docstrings, Markdown, Python, tests, and SVG content.
+2. Values within the same visual group end at a consistent target column whenever they fit inside that target width.
+3. A value that exceeds its target width remains readable and extends to the right without generating invalid padding.
+4. GitHub Stats rows remain aligned when counts grow or shrink.
+5. The final `)` of the GitHub LOC row stays aligned with the right edge of the reference stats row whenever the LOC row fits inside the configured target width.
+6. The LOC deletion value never receives dot padding between the comma and the minus sign.
+7. The same alignment behavior is applied to both SVG themes.
+8. Changing a static value such as a language list, hobby, email address, IDE string, or portfolio URL does not require manually recounting dots.
+9. No U+2014 character is present in any file modified by this work, including comments, docstrings, Markdown, Python, tests, and SVG content.
 
 ## Current state
 
@@ -81,7 +82,7 @@ The following groups share a common right-edge target:
 - Hobbies: Software, Hardware, Science.
 - Contact: Portfolio.Link, Email.Work, Instagram, Discord.
 
-Each group target is defined centrally in Python. The implementation should prefer named constants or a small configuration mapping over scattered numeric arguments.
+Each group target is defined centrally in Python. The target values must preserve the current card width as closely as possible and must not be scattered across individual call sites.
 
 The values can remain in the SVG for static rows. The generator reads their current text from the XML, computes the correct dot leader, and writes the adjusted padding back.
 
@@ -119,36 +120,56 @@ Its final width is calculated from the complete rendered row. The dot leader bef
 
 Every dot leader that should be calculated at runtime receives a stable `id`.
 
-Recommended naming convention:
+Every value node used by the generic alignment configuration also receives a stable `id`. This is required for all simple aligned rows. The implementation must not rely on positional XML traversal or matching visible text to find those values.
+
+Required naming convention for dot nodes:
 
 ```text
 <field>_dots
+```
+
+Required naming convention for value nodes:
+
+```text
+<field>_value
 ```
 
 Examples:
 
 ```text
 os_dots
+os_value
 host_dots
+host_value
 kernel_dots
+kernel_value
 ide_dots
+ide_value
 languages_application_dots
+languages_application_value
 languages_systems_dots
+languages_systems_value
 languages_spoken_dots
+languages_spoken_value
 hobbies_software_dots
+hobbies_software_value
 hobbies_hardware_dots
+hobbies_hardware_value
 hobbies_science_dots
+hobbies_science_value
 portfolio_dots
+portfolio_value
 email_dots
+email_value
 instagram_dots
+instagram_value
 discord_dots
+discord_value
 ```
-
-Static values that need to be read for alignment do not strictly require new ids if the code can reliably locate the corresponding row. However, stable ids on value nodes are preferred because they make the template explicit and easier to test.
 
 The two SVG themes must use the same ids and structural layout so the same Python code can process both files.
 
-All U+2014 separator characters in modified SVG content are replaced with ASCII hyphen characters. This applies to the profile header separators, Contact separator, and GitHub Stats separator.
+All U+2014 separator characters in modified SVG content are replaced one-for-one with ASCII hyphen characters so their character count and monospaced visual width stay unchanged.
 
 ## Python design
 
@@ -165,11 +186,17 @@ The function must handle:
 
 No other function should manually build repeated dot strings for profile rows.
 
+### Required node lookup helper
+
+Introduce one helper that returns an SVG node by id and raises a descriptive exception if the id is missing.
+
+Generic alignment code must use this helper for required template ids. Missing ids must not fail silently.
+
 ### Row measurement helper
 
 Introduce a helper that measures visible text length from explicit pieces rather than from raw XML serialization.
 
-Its input should be the visible prefix, current value, and optional suffix. Its output is an integer character width.
+Its input is the visible prefix, current value, and optional suffix. Its output is an integer character width.
 
 This keeps the calculation independent from XML tags and CSS classes.
 
@@ -178,21 +205,21 @@ This keeps the calculation independent from XML tags and CSS classes.
 Introduce a helper with a responsibility similar to:
 
 ```text
-align_value_row(root, dots_id, prefix_text, value_text, target_width)
+align_value_row(root, dots_id, value_id, prefix_text, target_width)
 ```
 
-The exact function signature may change during implementation, but it must have one clear purpose: calculate and write the dot leader for one row.
+The exact Python spelling can vary, but the behavior is fixed: read the current value node, calculate the needed dot leader, and write only the matching dot node.
 
-The helper should not fetch external data or modify unrelated SVG nodes.
+The helper must not fetch external data or modify unrelated SVG nodes.
 
 ### Group configuration
 
-Represent simple static groups in a compact configuration structure. Each entry identifies:
+Represent simple groups in one compact configuration structure. Each entry identifies:
 
 - the dot node id.
-- the value node id or other stable value source.
+- the value node id.
 - the visible prefix used for width calculation.
-- the target group width.
+- the target group width or a key that resolves to that width.
 
 This prevents a long series of nearly identical function calls and makes future profile edits easy.
 
@@ -200,12 +227,12 @@ This prevents a long series of nearly identical function calls and makes future 
 
 Dynamic data replacement happens before the final alignment pass.
 
-Recommended render sequence:
+Required render sequence:
 
 1. Parse SVG.
 2. Replace dynamic values.
 3. Compute two-column stat spacing.
-4. Align all simple rows from their current values.
+4. Align all simple rows from their current value nodes.
 5. Align the LOC row from the final compact LOC values.
 6. Write SVG.
 
@@ -213,27 +240,25 @@ This order ensures spacing always uses the final text that will be rendered.
 
 ### `generate_readme.py`
 
-The current LOC-specific monkey patch should be reduced or removed once the generic behavior lives in the core renderer.
+The current LOC-specific monkey patch is removed once the generic behavior lives in the core renderer.
 
-`generate_readme.py` should remain focused on GitHub Actions-safe data acquisition and delegating rendering to `today.py`.
+`generate_readme.py` remains focused on GitHub Actions-safe data acquisition and delegating rendering to `today.py`.
 
-If compatibility requires a small wrapper, it must not duplicate alignment algorithms.
+It must not contain a second alignment implementation.
 
 ## Error handling
 
-Missing required template ids should fail clearly during development and tests rather than silently producing misaligned output.
+Missing required template ids fail clearly during development and tests rather than silently producing misaligned output.
 
-A dedicated lookup helper may raise a descriptive exception when an expected alignment node is absent.
+Optional compatibility nodes such as `loc_del_dots` can be handled separately if they are intentionally allowed to be absent.
 
-Optional compatibility nodes such as `loc_del_dots` may be handled separately if they are intentionally allowed to be absent.
-
-Alignment functions must clamp negative computed padding to a safe minimum instead of producing invalid repeated-string operations.
+Alignment functions clamp negative computed padding to a safe minimum instead of producing invalid repeated-string operations.
 
 ## Tests
 
 Add a focused automated test module for alignment behavior.
 
-The tests should avoid network access. They should test pure formatting and local SVG rendering behavior.
+The tests avoid network access. They test pure formatting and local SVG rendering behavior.
 
 Required cases:
 
@@ -248,9 +273,10 @@ Required cases:
 9. Languages alignment survives a longer technology list.
 10. Contact alignment survives a longer email or portfolio value.
 11. Dark and light SVG templates expose the same required alignment ids.
-12. Generated or modified target files contain no U+2014 character.
+12. Missing required ids raise a descriptive error.
+13. Generated or modified target files contain no U+2014 character.
 
-Tests should compare computed visible widths, not screenshots. A screenshot or manual profile inspection can be used as a final verification step, but it is not the primary correctness test.
+Tests compare computed visible widths, not screenshots. A screenshot or manual profile inspection can be used as a final verification step, but it is not the primary correctness test.
 
 ## Verification workflow
 
@@ -259,14 +285,15 @@ Implementation is not complete until all of the following checks pass:
 1. Run the alignment unit tests locally or through an equivalent executable test path.
 2. Render both SVG themes with representative current values.
 3. Render with artificial long and short values to verify automatic expansion and contraction of dot leaders.
-4. Confirm the right edges of grouped rows are equal by computed visible width.
-5. Confirm the LOC final parenthesis has the same computed target edge as the reference stats row.
-6. Search every modified file for U+2014 and require zero matches.
-7. Review the Git diff for accidental text or value changes unrelated to alignment.
-8. Commit the implementation.
-9. Let the GitHub Actions workflow regenerate the SVGs.
-10. Fetch the final generated SVGs from `main` and verify that the dynamic run preserved the alignment rules.
-11. Check the workflow result or resulting commit before claiming completion.
+4. Confirm the right edges of grouped rows are equal by computed visible width when values fit inside their targets.
+5. Confirm overflow rows remain readable when values exceed their targets.
+6. Confirm the LOC final parenthesis has the same computed target edge as the reference stats row when it fits.
+7. Search every modified file for U+2014 and require zero matches.
+8. Review the Git diff for accidental text or value changes unrelated to alignment.
+9. Commit the implementation.
+10. Let the GitHub Actions workflow regenerate the SVGs.
+11. Fetch the final generated SVGs from `main` and verify that the dynamic run preserved the alignment rules.
+12. Check the workflow result or resulting commit before claiming completion.
 
 ## Self-review requirements during implementation
 
@@ -282,7 +309,7 @@ After SVG ids and separators are migrated, compare dark and light templates and 
 
 ### Review 3: Tests
 
-Before implementation is considered complete, inspect whether the tests cover both shrinking and growing values, overflow behavior, LOC formatting, theme parity, and the U+2014 constraint.
+Before implementation is considered complete, inspect whether the tests cover both shrinking and growing values, overflow behavior, missing ids, LOC formatting, theme parity, and the U+2014 constraint.
 
 ### Review 4: Final diff
 
@@ -313,6 +340,6 @@ dark_mode.svg
 light_mode.svg
 ```
 
-It should also add a focused test file. The exact test path will be selected in the implementation plan after checking the repository's current test conventions.
+It also adds one focused test file. The exact test path is selected in the implementation plan after checking the repository's current test conventions.
 
-No unrelated files should be modified unless the implementation plan identifies a concrete dependency and explains why it is necessary.
+No unrelated files are modified unless the implementation plan identifies a concrete dependency and explains why it is necessary.
