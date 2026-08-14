@@ -15,6 +15,7 @@ import today
 PUBLIC_REPOSITORIES_URL = "https://api.github.com/users/{username}/repos"
 PUBLIC_PAGE_SIZE = 100
 _PUBLIC_STATS_CACHE = None
+_ORIGINAL_JUSTIFY_FORMAT = today.justify_format
 
 
 def public_repository_stats(username):
@@ -109,8 +110,18 @@ def actions_safe_repo_stats(count_type, owner_affiliation):
     return 0
 
 
+def readme_justify_format(root, element_id, new_text, length=0):
+    """Keep LOC dot padding before the total, never before the deletion value."""
+    if element_id == "loc_del":
+        today.find_and_replace(root, element_id, today.format_display_text(new_text))
+        today.find_and_replace(root, "loc_del_dots", "")
+        return
+    _ORIGINAL_JUSTIFY_FORMAT(root, element_id, new_text, length)
+
+
 def main():
     today.graph_repos_stars = actions_safe_repo_stats
+    today.justify_format = readme_justify_format
     today.main()
 
 
