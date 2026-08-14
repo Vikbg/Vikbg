@@ -9,6 +9,7 @@ generator.
 """
 
 import requests
+from lxml.etree import parse
 
 import today
 
@@ -16,6 +17,7 @@ PUBLIC_REPOSITORIES_URL = "https://api.github.com/users/{username}/repos"
 PUBLIC_PAGE_SIZE = 100
 _PUBLIC_STATS_CACHE = None
 _ORIGINAL_JUSTIFY_FORMAT = today.justify_format
+_ORIGINAL_SVG_OVERWRITE = today.svg_overwrite
 
 
 def public_repository_stats(username):
@@ -119,9 +121,73 @@ def readme_justify_format(root, element_id, new_text, length=0):
     _ORIGINAL_JUSTIFY_FORMAT(root, element_id, new_text, length)
 
 
+def stats_row_width(commit_data, follower_data):
+    """Return the rendered character width of the commits/followers stats row."""
+    commit_text = today.format_display_text(commit_data)
+    follower_text = today.format_display_text(follower_data)
+    return len(
+        f". Commits:{today.build_dot_string(commit_text, today.COMMIT_DATA_WIDTH)}"
+        f"{commit_text}"
+        f"{today.secondary_stat_gap(today.commit_stats_left_width(commit_data))}"
+        f"Followers:{today.build_dot_string(follower_text, today.FOLLOWER_DATA_WIDTH)}"
+        f"{follower_text}"
+    )
+
+
+def loc_dot_padding(width):
+    """Build a dot leader of exactly ``width`` characters."""
+    if width <= 0:
+        return ""
+    if width == 1:
+        return " "
+    if width == 2:
+        return ". "
+    return " " + ("." * (width - 2)) + " "
+
+
+def readme_svg_overwrite(
+    filename,
+    age_data,
+    commit_data,
+    star_data,
+    repo_data,
+    contrib_data,
+    follower_data,
+    loc_data,
+):
+    """Render an SVG and align the final LOC parenthesis with the stats rows."""
+    _ORIGINAL_SVG_OVERWRITE(
+        filename,
+        age_data,
+        commit_data,
+        star_data,
+        repo_data,
+        contrib_data,
+        follower_data,
+        loc_data,
+    )
+
+    loc_text = today.format_display_text(loc_data[2])
+    added_text = today.format_compact_number(loc_data[0])
+    deleted_text = today.format_compact_number(loc_data[1])
+
+    target_width = stats_row_width(commit_data, follower_data)
+    fixed_width = len(
+        f". GitHub LOC:{loc_text} ( +{added_text}, -{deleted_text} )"
+    )
+    padding_width = max(1, target_width - fixed_width)
+
+    tree = parse(filename)
+    root = tree.getroot()
+    today.find_and_replace(root, "loc_data_dots", loc_dot_padding(padding_width))
+    today.find_and_replace(root, "loc_del_dots", "")
+    tree.write(filename, encoding="utf-8", xml_declaration=True)
+
+
 def main():
     today.graph_repos_stars = actions_safe_repo_stats
     today.justify_format = readme_justify_format
+    today.svg_overwrite = readme_svg_overwrite
     today.main()
 
 
