@@ -30,15 +30,33 @@ BIRTHDAY = datetime.datetime(2010, 10, 1)
 ARCHIVE_USER_ID = "U_kgDOC15JXw"
 CACHE_COMMENT_LINE = "This line is a comment block. Write whatever you want here.\n"
 
-# Visual widths used when inserting dot padding in the SVG text fields.
-AGE_DATA_WIDTH = 49
-COMMIT_DATA_WIDTH = 22
-LOC_DATA_WIDTH = 25
-FOLLOWER_DATA_WIDTH = 10
-REPO_DATA_WIDTH = 6
-STAR_DATA_WIDTH = 14
-STATS_SECONDARY_COLUMN_WIDTH = 34
-STATS_SECONDARY_SEPARATOR = " |  "
+# Shared visible widths used by the profile card alignment engine.
+PROFILE_ROW_WIDTH = 60
+STATS_LEFT_COLUMN_WIDTH = 34
+STATS_SEPARATOR = " |  "
+
+# Simple rows share one renderer so changing a value never requires recounting dots manually.
+SIMPLE_ROW_SPECS = (
+    ("os_dots", "os_value", ". OS:"),
+    ("age_data_dots", "age_data", ". Uptime:"),
+    ("host_dots", "host_value", ". Host:"),
+    ("kernel_dots", "kernel_value", ". Kernel:"),
+    ("ide_dots", "ide_value", ". IDE:"),
+    (
+        "languages_application_dots",
+        "languages_application_value",
+        ". Languages.Application:",
+    ),
+    ("languages_systems_dots", "languages_systems_value", ". Languages.Systems:"),
+    ("languages_spoken_dots", "languages_spoken_value", ". Languages.Spoken:"),
+    ("hobbies_software_dots", "hobbies_software_value", ". Hobbies.Software:"),
+    ("hobbies_hardware_dots", "hobbies_hardware_value", ". Hobbies.Hardware:"),
+    ("hobbies_science_dots", "hobbies_science_value", ". Hobbies.Science:"),
+    ("portfolio_dots", "portfolio_value", ". Portfolio.Link:"),
+    ("email_dots", "email_value", ". Email.Work:"),
+    ("instagram_dots", "instagram_value", ". Instagram:"),
+    ("discord_dots", "discord_value", ". Discord:"),
+)
 
 # Simple runtime counters so the script can report how many GraphQL calls each path used.
 QUERY_COUNT = {
@@ -517,7 +535,7 @@ def stars_counter(edges):
     return total_stars
 
 
-# Open one SVG template and replace the dynamic text fields used by the README card.
+# Open one SVG template, replace dynamic values, then align every rendered row.
 def svg_overwrite(
     filename,
     age_data,
@@ -531,37 +549,21 @@ def svg_overwrite(
     tree = parse(filename)
     root = tree.getroot()
 
-    # Each field has its own width target so the dots keep the card aligned like terminal output.
-    justify_format(root, "age_data", age_data, AGE_DATA_WIDTH)
-    justify_format(root, "commit_data", commit_data, COMMIT_DATA_WIDTH)
-    justify_format(root, "star_data", star_data, STAR_DATA_WIDTH)
-    justify_format(root, "repo_data", repo_data, REPO_DATA_WIDTH)
-    justify_format(root, "contrib_data", contrib_data)
-    justify_format(root, "follower_data", follower_data, FOLLOWER_DATA_WIDTH)
-    justify_format(root, "loc_data", loc_data[2], LOC_DATA_WIDTH)
-    justify_format(root, "loc_add", format_compact_number(loc_data[0]))
-    justify_format(root, "loc_del", format_compact_number(loc_data[1]), 5)
-    find_and_replace(
-        root,
-        "repo_stats_gap",
-        secondary_stat_gap(repo_stats_left_width(repo_data, contrib_data)),
-    )
-    find_and_replace(
-        root,
-        "commit_stats_gap",
-        secondary_stat_gap(commit_stats_left_width(commit_data)),
-    )
+    # Replace all dynamic values before measuring text so spacing uses the final rendered content.
+    replace_display_value(root, "age_data", age_data)
+    replace_display_value(root, "commit_data", commit_data)
+    replace_display_value(root, "star_data", star_data)
+    replace_display_value(root, "repo_data", repo_data)
+    replace_display_value(root, "contrib_data", contrib_data)
+    replace_display_value(root, "follower_data", follower_data)
+    replace_display_value(root, "loc_data", loc_data[2])
+    replace_display_value(root, "loc_add", format_compact_number(loc_data[0]))
+    replace_display_value(root, "loc_del", format_compact_number(loc_data[1]))
+
+    align_simple_rows(root)
+    align_stats_rows(root)
+    align_loc_row(root)
     tree.write(filename, encoding="utf-8", xml_declaration=True)
-
-
-# Replace one SVG text node and regenerate its matching "*_dots" spacing field.
-def justify_format(root, element_id, new_text, length=0):
-    new_text = format_display_text(new_text)
-    find_and_replace(root, element_id, new_text)
-
-    # Dots are generated from a target width so labels and values stay visually aligned.
-    dot_string = build_dot_string(new_text, length)
-    find_and_replace(root, f"{element_id}_dots", dot_string)
 
 
 # Normalize values to the exact text form shown inside the SVG card.
@@ -571,43 +573,127 @@ def format_display_text(value):
     return str(value)
 
 
-# Build the dot padding that visually separates a label from its value in the SVG.
-def build_dot_string(value_text, length):
-    just_len = max(0, length - len(value_text))
-    if just_len <= 2:
-        dot_map = {0: "", 1: " ", 2: ". "}
-        return dot_map[just_len]
-    return " " + ("." * just_len) + " "
+# Replace one required SVG value node and return the final visible text.
+def replace_display_value(root, element_id, value):
+    text = format_display_text(value)
+    require_svg_element(root, element_id).text = text
+    return text
 
 
-# Keep the second stat column aligned by filling any slack before the separator.
-def secondary_stat_gap(left_width, target_width=STATS_SECONDARY_COLUMN_WIDTH):
-    return (" " * max(0, target_width - left_width)) + STATS_SECONDARY_SEPARATOR
-
-
-# Measure the visible width of the left side of the first GitHub stats row.
-def repo_stats_left_width(repo_data, contrib_data):
-    repo_text = format_display_text(repo_data)
-    contrib_text = format_display_text(contrib_data)
-    return len(
-        f". Repos:{build_dot_string(repo_text, REPO_DATA_WIDTH)}{repo_text}"
-        f" {{Contributed: {contrib_text}}}"
-    )
-
-
-# Measure the visible width of the left side of the second GitHub stats row.
-def commit_stats_left_width(commit_data):
-    commit_text = format_display_text(commit_data)
-    return len(
-        f". Commits:{build_dot_string(commit_text, COMMIT_DATA_WIDTH)}{commit_text}"
-    )
-
-
-# Find one SVG element by its id attribute and replace its text if it exists.
-def find_and_replace(root, element_id, new_text):
+# Return one required SVG node or fail clearly when the template structure is incomplete.
+def require_svg_element(root, element_id):
     element = root.find(f".//*[@id='{element_id}']")
-    if element is not None:
-        element.text = new_text
+    if element is None:
+        raise ValueError(f"missing required SVG element: {element_id}")
+    return element
+
+
+# Read the visible text of an SVG node, including text nested inside links.
+def svg_visible_text(element):
+    return "".join(element.itertext())
+
+
+# Build a dot leader with an exact visible width.
+def build_dot_leader(width):
+    if width <= 0:
+        return ""
+    if width == 1:
+        return " "
+    if width == 2:
+        return ". "
+    return " " + ("." * (width - 2)) + " "
+
+
+# Align one value row to a target width and keep one separator space on overflow.
+def set_aligned_dots(
+    root,
+    dots_id,
+    prefix_text,
+    value_text,
+    suffix_text="",
+    target_width=PROFILE_ROW_WIDTH,
+):
+    requested_width = target_width - len(prefix_text) - len(value_text) - len(suffix_text)
+    padding_width = max(1, requested_width)
+    dots = build_dot_leader(padding_width)
+    require_svg_element(root, dots_id).text = dots
+    return len(prefix_text) + len(dots) + len(value_text) + len(suffix_text)
+
+
+# Recompute every simple profile row from its current value in the SVG template.
+def align_simple_rows(root):
+    for dots_id, value_id, prefix_text in SIMPLE_ROW_SPECS:
+        value_text = svg_visible_text(require_svg_element(root, value_id))
+        set_aligned_dots(root, dots_id, prefix_text, value_text)
+
+
+# Keep the second GitHub Stats column at its configured starting position when possible.
+def stats_separator(current_width):
+    return (" " * max(0, STATS_LEFT_COLUMN_WIDTH - current_width)) + STATS_SEPARATOR
+
+
+# Align both two-column GitHub Stats rows from the final displayed values.
+def align_stats_rows(root):
+    repo_text = svg_visible_text(require_svg_element(root, "repo_data"))
+    contrib_text = svg_visible_text(require_svg_element(root, "contrib_data"))
+    star_text = svg_visible_text(require_svg_element(root, "star_data"))
+    commit_text = svg_visible_text(require_svg_element(root, "commit_data"))
+    follower_text = svg_visible_text(require_svg_element(root, "follower_data"))
+
+    repo_suffix = f" {{Contributed: {contrib_text}}}"
+    repo_left_width = set_aligned_dots(
+        root,
+        "repo_data_dots",
+        ". Repos:",
+        repo_text,
+        suffix_text=repo_suffix,
+        target_width=STATS_LEFT_COLUMN_WIDTH,
+    )
+    repo_gap = stats_separator(repo_left_width)
+    require_svg_element(root, "repo_stats_gap").text = repo_gap
+    repo_dots = require_svg_element(root, "repo_data_dots").text or ""
+    set_aligned_dots(
+        root,
+        "star_data_dots",
+        f". Repos:{repo_dots}{repo_text}{repo_suffix}{repo_gap}Stars:",
+        star_text,
+        target_width=PROFILE_ROW_WIDTH,
+    )
+
+    commit_left_width = set_aligned_dots(
+        root,
+        "commit_data_dots",
+        ". Commits:",
+        commit_text,
+        target_width=STATS_LEFT_COLUMN_WIDTH,
+    )
+    commit_gap = stats_separator(commit_left_width)
+    require_svg_element(root, "commit_stats_gap").text = commit_gap
+    commit_dots = require_svg_element(root, "commit_data_dots").text or ""
+    set_aligned_dots(
+        root,
+        "follower_data_dots",
+        f". Commits:{commit_dots}{commit_text}{commit_gap}Followers:",
+        follower_text,
+        target_width=PROFILE_ROW_WIDTH,
+    )
+
+
+# Align the complete LOC row while keeping the deletion fragment free of dot padding.
+def align_loc_row(root):
+    net_text = svg_visible_text(require_svg_element(root, "loc_data"))
+    added_text = svg_visible_text(require_svg_element(root, "loc_add"))
+    deleted_text = svg_visible_text(require_svg_element(root, "loc_del"))
+    suffix = f" ( +{added_text}, -{deleted_text} )"
+    set_aligned_dots(
+        root,
+        "loc_data_dots",
+        ". GitHub LOC:",
+        net_text,
+        suffix_text=suffix,
+        target_width=PROFILE_ROW_WIDTH,
+    )
+    require_svg_element(root, "loc_del_dots").text = ""
 
 
 # Shorten large numeric values so the SVG does not overflow when LOC totals become very large.
