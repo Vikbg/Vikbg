@@ -51,8 +51,8 @@ text, tspan {white-space: pre;}
 <tspan x="390" y="110" class="cc">. </tspan><tspan class="key">Kernel</tspan>:<tspan class="cc"> ........ </tspan><tspan class="value">Student (Paul Cornu High School) Operator</tspan>
 <tspan x="390" y="130" class="cc">. </tspan><tspan class="key">IDE</tspan>:<tspan class="cc"> ........................ </tspan><tspan class="value">NVIM v0.12.4, VSCode 1.132.0</tspan>
 <tspan x="390" y="150" class="cc">. </tspan>
-<tspan x="390" y="170" class="cc">. </tspan><tspan class="key">Languages</tspan>.<tspan class="key">Application</tspan>:<tspan class="cc"> ......... </tspan><tspan class="value">Python, TypeScript, C#</tspan>
-<tspan x="390" y="190" class="cc">. </tspan><tspan class="key">Languages</tspan>.<tspan class="key">Systems</tspan>:<tspan class="cc"> ................ </tspan><tspan class="value">Rust, C, C++</tspan>
+<tspan x="390" y="170" class="cc">. </tspan><tspan class="key">Languages</tspan>.<tspan class="key">Application</tspan>:<tspan class="cc"> ............ </tspan><tspan class="value">Python, TypeScript, C#</tspan>
+<tspan x="390" y="190" class="cc">. </tspan><tspan class="key">Languages</tspan>.<tspan class="key">Systems</tspan>:<tspan class="cc"> .......................... </tspan><tspan class="value">Rust, C, C++</tspan>
 <tspan x="390" y="210" class="cc">. </tspan><tspan class="key">Languages</tspan>.<tspan class="key">Spoken</tspan>:<tspan class="cc"> ....... </tspan><tspan class="value">English, French, Russian, German</tspan>
 <tspan x="390" y="230" class="cc">. </tspan>
 <tspan x="390" y="250" class="cc">. </tspan><tspan class="key">Hobbies</tspan>.<tspan class="key">Software</tspan>:<tspan class="cc"> ...... </tspan><tspan class="value">Programming Projects, Learning ML</tspan>
