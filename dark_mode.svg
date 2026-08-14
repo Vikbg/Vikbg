@@ -44,28 +44,28 @@ text, tspan {white-space: pre;}
 <tspan x="15" y="510">          ==--@@@@@@@@@@@@@@@@%-       </tspan>
 </text>
 <text x="390" y="30" fill="#c9d1d9">
-<tspan x="390" y="30">viktor@serhiienko</tspan> -——————————————————————————————————————-—-
-<tspan x="390" y="50" class="cc">. </tspan><tspan class="key">OS</tspan>:<tspan class="cc"> ............................ </tspan><tspan class="value">Linux (Pop!_OS 22.04 LTS)</tspan>
+<tspan x="390" y="30">viktor@serhiienko</tspan> ------------------------------------------
+<tspan x="390" y="50" class="cc">. </tspan><tspan class="key">OS</tspan>:<tspan class="cc" id="os_dots"> ............................ </tspan><tspan class="value" id="os_value">Linux (Pop!_OS 22.04 LTS)</tspan>
 <tspan x="390" y="70" class="cc">. </tspan><tspan class="key">Uptime</tspan>:<tspan class="cc" id="age_data_dots"> ..................... </tspan><tspan class="value" id="age_data">15 years, 10 months, 13 days</tspan>
-<tspan x="390" y="90" class="cc">. </tspan><tspan class="key">Host</tspan>:<tspan class="cc"> ......................................... </tspan><tspan class="value">None, Inc.</tspan>
-<tspan x="390" y="110" class="cc">. </tspan><tspan class="key">Kernel</tspan>:<tspan class="cc"> ........ </tspan><tspan class="value">Student (Paul Cornu High School) Operator</tspan>
-<tspan x="390" y="130" class="cc">. </tspan><tspan class="key">IDE</tspan>:<tspan class="cc"> ........................ </tspan><tspan class="value">NVIM v0.12.4, VSCode 1.132.0</tspan>
+<tspan x="390" y="90" class="cc">. </tspan><tspan class="key">Host</tspan>:<tspan class="cc" id="host_dots"> ......................................... </tspan><tspan class="value" id="host_value">None, Inc.</tspan>
+<tspan x="390" y="110" class="cc">. </tspan><tspan class="key">Kernel</tspan>:<tspan class="cc" id="kernel_dots"> ........ </tspan><tspan class="value" id="kernel_value">Student (Paul Cornu High School) Operator</tspan>
+<tspan x="390" y="130" class="cc">. </tspan><tspan class="key">IDE</tspan>:<tspan class="cc" id="ide_dots"> ........................ </tspan><tspan class="value" id="ide_value">NVIM v0.12.4, VSCode 1.132.0</tspan>
 <tspan x="390" y="150" class="cc">. </tspan>
-<tspan x="390" y="170" class="cc">. </tspan><tspan class="key">Languages</tspan>.<tspan class="key">Application</tspan>:<tspan class="cc"> ............ </tspan><tspan class="value">Python, TypeScript, C#</tspan>
-<tspan x="390" y="190" class="cc">. </tspan><tspan class="key">Languages</tspan>.<tspan class="key">Systems</tspan>:<tspan class="cc"> .......................... </tspan><tspan class="value">Rust, C, C++</tspan>
-<tspan x="390" y="210" class="cc">. </tspan><tspan class="key">Languages</tspan>.<tspan class="key">Spoken</tspan>:<tspan class="cc"> ....... </tspan><tspan class="value">English, French, Russian, German</tspan>
+<tspan x="390" y="170" class="cc">. </tspan><tspan class="key">Languages</tspan>.<tspan class="key">Application</tspan>:<tspan class="cc" id="languages_application_dots"> ............ </tspan><tspan class="value" id="languages_application_value">Python, TypeScript, C#</tspan>
+<tspan x="390" y="190" class="cc">. </tspan><tspan class="key">Languages</tspan>.<tspan class="key">Systems</tspan>:<tspan class="cc" id="languages_systems_dots"> .......................... </tspan><tspan class="value" id="languages_systems_value">Rust, C, C++</tspan>
+<tspan x="390" y="210" class="cc">. </tspan><tspan class="key">Languages</tspan>.<tspan class="key">Spoken</tspan>:<tspan class="cc" id="languages_spoken_dots"> ....... </tspan><tspan class="value" id="languages_spoken_value">English, French, Russian, German</tspan>
 <tspan x="390" y="230" class="cc">. </tspan>
-<tspan x="390" y="250" class="cc">. </tspan><tspan class="key">Hobbies</tspan>.<tspan class="key">Software</tspan>:<tspan class="cc"> .................. </tspan><tspan class="value">Software Projects, ML</tspan>
-<tspan x="390" y="270" class="cc">. </tspan><tspan class="key">Hobbies</tspan>.<tspan class="key">Hardware</tspan>:<tspan class="cc"> ............. </tspan><tspan class="value">Embedded Systems, Robotics</tspan>
-<tspan x="390" y="290" class="cc">. </tspan><tspan class="key">Hobbies</tspan>.<tspan class="key">Science</tspan>:<tspan class="cc"> .................... </tspan><tspan class="value">Mathematics, Physics</tspan>
-<tspan x="390" y="320">- Contact</tspan> -——————————————————————————————————————————————-—-
-<tspan x="390" y="350" class="cc">. </tspan><tspan class="key">Portfolio</tspan>.<tspan class="key">Link</tspan>:<tspan class="cc"> ................ </tspan><tspan class="value"><a href="https://vikbg.github.io/portfolio">vikbg.github.io/portfolio</a></tspan>
-<tspan x="390" y="370" class="cc">. </tspan><tspan class="key">Email</tspan>.<tspan class="key">Work</tspan>:<tspan class="cc"> ......................... </tspan><tspan class="value">viktorsrhk@gmail.com</tspan>
-<tspan x="390" y="390" class="cc">. </tspan><tspan class="key">Instagram</tspan>:<tspan class="cc"> ................................... </tspan><tspan class="value">viktor_srhk</tspan>
-<tspan x="390" y="410" class="cc">. </tspan><tspan class="key">Discord</tspan>:<tspan class="cc"> ..................................... </tspan><tspan class="value">viktor_srhk</tspan>
-<tspan x="390" y="450">- GitHub Stats</tspan> -—————————————————————————————————————————-—-
+<tspan x="390" y="250" class="cc">. </tspan><tspan class="key">Hobbies</tspan>.<tspan class="key">Software</tspan>:<tspan class="cc" id="hobbies_software_dots"> .................. </tspan><tspan class="value" id="hobbies_software_value">Software Projects, ML</tspan>
+<tspan x="390" y="270" class="cc">. </tspan><tspan class="key">Hobbies</tspan>.<tspan class="key">Hardware</tspan>:<tspan class="cc" id="hobbies_hardware_dots"> ............. </tspan><tspan class="value" id="hobbies_hardware_value">Embedded Systems, Robotics</tspan>
+<tspan x="390" y="290" class="cc">. </tspan><tspan class="key">Hobbies</tspan>.<tspan class="key">Science</tspan>:<tspan class="cc" id="hobbies_science_dots"> .................... </tspan><tspan class="value" id="hobbies_science_value">Mathematics, Physics</tspan>
+<tspan x="390" y="320">- Contact</tspan> --------------------------------------------------
+<tspan x="390" y="350" class="cc">. </tspan><tspan class="key">Portfolio</tspan>.<tspan class="key">Link</tspan>:<tspan class="cc" id="portfolio_dots"> ................ </tspan><tspan class="value" id="portfolio_value"><a href="https://vikbg.github.io/portfolio">vikbg.github.io/portfolio</a></tspan>
+<tspan x="390" y="370" class="cc">. </tspan><tspan class="key">Email</tspan>.<tspan class="key">Work</tspan>:<tspan class="cc" id="email_dots"> ......................... </tspan><tspan class="value" id="email_value">viktorsrhk@gmail.com</tspan>
+<tspan x="390" y="390" class="cc">. </tspan><tspan class="key">Instagram</tspan>:<tspan class="cc" id="instagram_dots"> ................................... </tspan><tspan class="value" id="instagram_value">viktor_srhk</tspan>
+<tspan x="390" y="410" class="cc">. </tspan><tspan class="key">Discord</tspan>:<tspan class="cc" id="discord_dots"> ..................................... </tspan><tspan class="value" id="discord_value">viktor_srhk</tspan>
+<tspan x="390" y="450">- GitHub Stats</tspan> ---------------------------------------------
 <tspan x="390" y="470" class="cc">. </tspan><tspan class="key">Repos</tspan>:<tspan class="cc" id="repo_data_dots"> .... </tspan><tspan class="value" id="repo_data">13</tspan> {<tspan class="key">Contributed</tspan>: <tspan class="value" id="contrib_data">13</tspan>}<tspan class="cc" id="repo_stats_gap"> |  </tspan><tspan class="key">Stars</tspan>:<tspan class="cc" id="star_data_dots"> ............ </tspan><tspan class="value" id="star_data">29</tspan>
-<tspan x="390" y="490" class="cc">. </tspan><tspan class="key">Commits</tspan>:<tspan class="cc" id="commit_data_dots"> ................... </tspan><tspan class="value" id="commit_data">613</tspan><tspan class="cc" id="commit_stats_gap"> |  </tspan><tspan class="key">Followers</tspan>:<tspan class="cc" id="follower_data_dots"> ........ </tspan><tspan class="value" id="follower_data">28</tspan>
-<tspan x="390" y="510" class="cc">. </tspan><tspan class="key">GitHub LOC</tspan>:<tspan class="cc" id="loc_data_dots"> ...................... </tspan><tspan class="value" id="loc_data">58,520</tspan> ( <tspan class="addColor">+</tspan><tspan class="addColor" id="loc_add">86.5K</tspan>, <tspan id="loc_del_dots"></tspan><tspan class="delColor">-</tspan><tspan class="delColor" id="loc_del">28K</tspan> )
+<tspan x="390" y="490" class="cc">. </tspan><tspan class="key">Commits</tspan>:<tspan class="cc" id="commit_data_dots"> ................... </tspan><tspan class="value" id="commit_data">615</tspan><tspan class="cc" id="commit_stats_gap"> |  </tspan><tspan class="key">Followers</tspan>:<tspan class="cc" id="follower_data_dots"> ........ </tspan><tspan class="value" id="follower_data">28</tspan>
+<tspan x="390" y="510" class="cc">. </tspan><tspan class="key">GitHub LOC</tspan>:<tspan class="cc" id="loc_data_dots"> .................... </tspan><tspan class="value" id="loc_data">58,870</tspan> ( <tspan class="addColor">+</tspan><tspan class="addColor" id="loc_add">87.1K</tspan>, <tspan id="loc_del_dots"></tspan><tspan class="delColor">-</tspan><tspan class="delColor" id="loc_del">28.2K</tspan> )
 </text>
 </svg>
