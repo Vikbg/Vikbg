@@ -1,0 +1,39 @@
+name: Apply profile alignment migration
+on:
+  push:
+    branches:
+      - feat/profile-card-alignment
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+      - name: Get Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'cache/requirements.txt'
+      - name: Install dependencies
+        run: python -m pip install -r cache/requirements.txt
+      - name: Apply migration
+        run: python tools/apply_profile_alignment.py
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+      - name: Check Python syntax
+        run: python -m py_compile today.py generate_readme.py tests/test_alignment.py
+      - name: Commit migration result
+        run: |-
+          rm tools/apply_profile_alignment.py
+          rm .github/workflows/apply_profile_alignment.yml
+          git add -A
+          git diff --cached --check
+          git config --global user.email "190728543+Vikbg@users.noreply.github.com"
+          git config --global user.name "Vikbg/GitHub-Actions-Bot"
+          git commit -m "refactor: centralize profile card alignment"
+          git push
