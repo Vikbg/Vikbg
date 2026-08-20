@@ -32,6 +32,9 @@ jobs:
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN || github.token }}
           USER_NAME: ${{ secrets.USER_NAME || github.repository_owner }}
         run: python generate_readme.py
+      - name: Record branch verification
+        if: github.ref == 'refs/heads/feat/private-contribution-stats'
+        run: printf 'tests-and-generator-passed\n' > .private-stats-ci-ok
       - name: Commit
         run: |-
           git add .
