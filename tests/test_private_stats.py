@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import generate_readme
 import today
 
 
@@ -18,6 +19,15 @@ class PrivateRepositoryStatsTests(unittest.TestCase):
         today.USER_NAME = "Vikbg"
         self.addCleanup(setattr, today, "CACHE_DIR", self.original_cache_dir)
         self.addCleanup(setattr, today, "USER_NAME", self.original_user_name)
+
+        self.original_private_commit_count = generate_readme._PRIVATE_COMMIT_COUNT
+        generate_readme._PRIVATE_COMMIT_COUNT = 0
+        self.addCleanup(
+            setattr,
+            generate_readme,
+            "_PRIVATE_COMMIT_COUNT",
+            self.original_private_commit_count,
+        )
 
     def test_private_repository_stats_are_aggregated_without_entering_public_cache(self):
         public_repo = "Vikbg/public-repo"
@@ -52,9 +62,11 @@ class PrivateRepositoryStatsTests(unittest.TestCase):
         with mock.patch.object(
             today, "graphql_request", return_value=graphql_payload
         ) as graphql_request, mock.patch.object(
-            today, "recursive_loc", return_value=(25, 5, 2)
-        ) as recursive_loc:
-            loc_data, private_commits = today.loc_query(
+            generate_readme,
+            "uncached_private_repo_loc",
+            return_value=(25, 5, 2),
+        ) as private_repo_loc:
+            loc_data = generate_readme.private_safe_loc_query(
                 ["OWNER", "COLLABORATOR", "ORGANIZATION_MEMBER"],
                 comment_size=0,
                 force_cache=True,
@@ -71,13 +83,15 @@ class PrivateRepositoryStatsTests(unittest.TestCase):
 
         self.assertEqual(loc_data[:3], [25, 5, 20])
         self.assertFalse(loc_data[3])
-        self.assertEqual(private_commits, 2)
+        self.assertEqual(generate_readme._PRIVATE_COMMIT_COUNT, 2)
+        private_repo_loc.assert_called_once_with("Vikbg", "private-repo")
 
-        recursive_loc.assert_called_once()
-        recursive_args = recursive_loc.call_args.args
-        self.assertEqual(recursive_args[:2], ("Vikbg", "private-repo"))
-        self.assertIsNone(recursive_args[2])
-        self.assertIsNone(recursive_args[3])
+    def test_commit_counter_adds_private_commits_to_public_cached_commits(self):
+        generate_readme._PRIVATE_COMMIT_COUNT = 11
+        with mock.patch.object(
+            generate_readme, "_ORIGINAL_COMMIT_COUNTER", return_value=290
+        ):
+            self.assertEqual(generate_readme.actions_safe_commit_counter(7), 301)
 
 
 if __name__ == "__main__":
