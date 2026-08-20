@@ -1,14 +1,14 @@
 """Run the profile README generator with GitHub Actions-safe statistics.
 
-GitHub's built-in ``GITHUB_TOKEN`` is scoped to the current repository. It can
-resolve a user's repository connection but cannot read nested fields, such as
-stargazer counts, from the user's other repositories. Public owner repository
-statistics are therefore fetched through GitHub's public REST endpoint.
+GitHub's built-in ``GITHUB_TOKEN`` is scoped to the current repository. Public
+owner repository and star totals are therefore fetched through GitHub's public
+REST endpoint, while the configured ``ACCESS_TOKEN`` is used for complete
+contribution data.
 
-When ``ACCESS_TOKEN`` can read private repositories, private commit and LOC
-statistics are aggregated in memory. Only public repositories are written to
-the persistent repository cache, so private repository names, hashes, commit
-counts, and per-repository LOC never enter the public Git history.
+Private commit and LOC statistics are aggregated in memory. Only public
+repositories are written to the persistent repository cache, so private
+repository names, hashes, commit counts, and per-repository LOC never enter the
+public Git history.
 """
 
 import requests
@@ -17,8 +17,10 @@ import today
 
 PUBLIC_REPOSITORIES_URL = "https://api.github.com/users/{username}/repos"
 PUBLIC_PAGE_SIZE = 100
+LEGACY_PROFILE_BOT_NAME = "Vikbg/GitHub-Actions-Bot"
 _PUBLIC_STATS_CACHE = None
 _PRIVATE_COMMIT_COUNT = 0
+_PRIVATE_CONTRIBUTED_REPO_COUNT = 0
 _ORIGINAL_COMMIT_COUNTER = today.commit_counter
 
 
@@ -81,37 +83,157 @@ def public_repository_stats(username):
     return _PUBLIC_STATS_CACHE
 
 
-def repository_connection_count(owner_affiliation):
-    """Count repositories without requesting fields blocked for integrations."""
-    query = """
-    query ($owner_affiliation: [RepositoryAffiliation], $login: String!) {
-        user(login: $login) {
-            repositories(ownerAffiliations: $owner_affiliation) {
-                totalCount
-            }
-        }
-    }"""
-    data = today.graphql_request(
-        "repository_connection_count",
-        query,
-        {
-            "owner_affiliation": owner_affiliation,
-            "login": today.USER_NAME,
-        },
-    )
-    return int(data["user"]["repositories"]["totalCount"])
+def public_contributed_repo_count(comment_size):
+    """Count cached public repositories that contain at least one user commit."""
+    try:
+        lines = today.cache_file_path().read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return 0
+
+    contributed = 0
+    for line in lines[comment_size:]:
+        parts = line.split()
+        if len(parts) >= 3 and parts[2].isdigit() and int(parts[2]) > 0:
+            contributed += 1
+    return contributed
 
 
 def actions_safe_repo_stats(count_type, owner_affiliation):
-    """Replacement for today.graph_repos_stars that works with GITHUB_TOKEN."""
+    """Return public owner stats or true per-user contributed-repository totals."""
     today.query_count("graph_repos_stars")
     affiliations = list(owner_affiliation)
 
     if affiliations == ["OWNER"]:
         return public_repository_stats(today.USER_NAME).get(count_type, 0)
     if count_type == "repos":
-        return repository_connection_count(affiliations)
+        return (
+            public_contributed_repo_count(today.COMMENT_BLOCK_SIZE)
+            + _PRIVATE_CONTRIBUTED_REPO_COUNT
+        )
     return 0
+
+
+def is_legacy_profile_generator_commit(owner, repo_name, commit):
+    """Identify old README-generator commits that were attributed to the user."""
+    profile_repository = (
+        owner.casefold() == today.USER_NAME.casefold()
+        and repo_name.casefold() == today.USER_NAME.casefold()
+    )
+    author = commit.get("author") or {}
+    return profile_repository and author.get("name") == LEGACY_PROFILE_BOT_NAME
+
+
+def actions_safe_public_loc_counter_one_repo(
+    owner,
+    repo_name,
+    cache_rows,
+    cache_header,
+    history,
+    addition_total,
+    deletion_total,
+    my_commits,
+):
+    """Count one public history page while excluding legacy generator commits."""
+    for edge in history["edges"]:
+        commit = edge["node"]
+        author = commit.get("author") or {}
+        user = author.get("user") or {}
+        if user.get("id") != today.OWNER_ID:
+            continue
+        if is_legacy_profile_generator_commit(owner, repo_name, commit):
+            continue
+
+        my_commits += 1
+        addition_total += commit["additions"]
+        deletion_total += commit["deletions"]
+
+    if not history["pageInfo"]["hasNextPage"]:
+        return addition_total, deletion_total, my_commits
+
+    return actions_safe_public_recursive_loc(
+        owner,
+        repo_name,
+        cache_rows,
+        cache_header,
+        addition_total,
+        deletion_total,
+        my_commits,
+        history["pageInfo"]["endCursor"],
+    )
+
+
+def actions_safe_public_recursive_loc(
+    owner,
+    repo_name,
+    cache_rows,
+    cache_header,
+    addition_total=0,
+    deletion_total=0,
+    my_commits=0,
+    cursor=None,
+):
+    """Scan only the profile user's commits for one public repository."""
+    today.query_count("recursive_loc")
+    query = """
+    query ($repo_name: String!, $owner: String!, $cursor: String, $author_id: ID!) {
+        repository(name: $repo_name, owner: $owner) {
+            defaultBranchRef {
+                target {
+                    ... on Commit {
+                        history(first: 100, after: $cursor, author: {id: $author_id}) {
+                            edges {
+                                node {
+                                    ... on Commit {
+                                        author {
+                                            name
+                                            user {
+                                                id
+                                            }
+                                        }
+                                        deletions
+                                        additions
+                                    }
+                                }
+                            }
+                            pageInfo {
+                                endCursor
+                                hasNextPage
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }"""
+    data = today.graphql_request(
+        "actions_safe_public_recursive_loc",
+        query,
+        {
+            "repo_name": repo_name,
+            "owner": owner,
+            "cursor": cursor,
+            "author_id": today.OWNER_ID,
+        },
+        partial_cache=(cache_rows, cache_header),
+    )
+    repository = data.get("repository")
+    if repository is None:
+        return addition_total, deletion_total, my_commits
+
+    branch = repository.get("defaultBranchRef")
+    if branch is None:
+        return addition_total, deletion_total, my_commits
+
+    return actions_safe_public_loc_counter_one_repo(
+        owner,
+        repo_name,
+        cache_rows,
+        cache_header,
+        branch["target"]["history"],
+        addition_total,
+        deletion_total,
+        my_commits,
+    )
 
 
 def uncached_private_repo_loc(
@@ -125,12 +247,12 @@ def uncached_private_repo_loc(
     """Count one private repository without persisting repository metadata."""
     today.query_count("recursive_loc")
     query = """
-    query ($repo_name: String!, $owner: String!, $cursor: String) {
+    query ($repo_name: String!, $owner: String!, $cursor: String, $author_id: ID!) {
         repository(name: $repo_name, owner: $owner) {
             defaultBranchRef {
                 target {
                     ... on Commit {
-                        history(first: 100, after: $cursor) {
+                        history(first: 100, after: $cursor, author: {id: $author_id}) {
                             edges {
                                 node {
                                     ... on Commit {
@@ -157,7 +279,12 @@ def uncached_private_repo_loc(
     data = today.graphql_request(
         "uncached_private_repo_loc",
         query,
-        {"repo_name": repo_name, "owner": owner, "cursor": cursor},
+        {
+            "repo_name": repo_name,
+            "owner": owner,
+            "cursor": cursor,
+            "author_id": today.OWNER_ID,
+        },
     )
     repository = data.get("repository")
     if repository is None:
@@ -192,11 +319,12 @@ def uncached_private_repo_loc(
 
 def private_safe_loc_query(owner_affiliation, comment_size=0, force_cache=False):
     """Aggregate public cached stats plus private in-memory stats."""
-    global _PRIVATE_COMMIT_COUNT
+    global _PRIVATE_COMMIT_COUNT, _PRIVATE_CONTRIBUTED_REPO_COUNT
     _PRIVATE_COMMIT_COUNT = 0
+    _PRIVATE_CONTRIBUTED_REPO_COUNT = 0
 
     query = """
-    query ($owner_affiliation: [RepositoryAffiliation], $login: String!, $cursor: String) {
+    query ($owner_affiliation: [RepositoryAffiliation], $login: String!, $cursor: String, $author_id: ID!) {
         user(login: $login) {
             repositories(first: 60, after: $cursor, ownerAffiliations: $owner_affiliation) {
                 edges {
@@ -207,7 +335,7 @@ def private_safe_loc_query(owner_affiliation, comment_size=0, force_cache=False)
                             defaultBranchRef {
                                 target {
                                     ... on Commit {
-                                        history {
+                                        history(author: {id: $author_id}) {
                                             totalCount
                                         }
                                     }
@@ -235,6 +363,7 @@ def private_safe_loc_query(owner_affiliation, comment_size=0, force_cache=False)
                 "owner_affiliation": owner_affiliation,
                 "login": today.USER_NAME,
                 "cursor": cursor,
+                "author_id": today.OWNER_ID,
             },
         )
         repositories = data["user"]["repositories"]
@@ -267,6 +396,8 @@ def private_safe_loc_query(owner_affiliation, comment_size=0, force_cache=False)
         private_additions += additions
         private_deletions += deletions
         _PRIVATE_COMMIT_COUNT += commits
+        if commits > 0:
+            _PRIVATE_CONTRIBUTED_REPO_COUNT += 1
 
     return [
         public_loc[0] + private_additions,
@@ -284,6 +415,8 @@ def actions_safe_commit_counter(comment_size):
 def main():
     today.graph_repos_stars = actions_safe_repo_stats
     today.loc_query = private_safe_loc_query
+    today.recursive_loc = actions_safe_public_recursive_loc
+    today.loc_counter_one_repo = actions_safe_public_loc_counter_one_repo
     today.commit_counter = actions_safe_commit_counter
     today.main()
 
